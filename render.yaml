@@ -3,7 +3,7 @@ services:
     name: api-dannos
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "python main.py"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port 10000y"
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.6"

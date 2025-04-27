@@ -150,6 +150,16 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.get("/")
+async def root():
+    return {
+        "message": "Bienvenido a la API de Detección de Daños",
+        "endpoints": {
+            "predict": "/predict (POST - Sube una imagen para predecir daños)",
+            "health": "/health (GET - Verifica el estado de la API)"
+        }
+    }
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     """Endpoint para predecir daños con imagen"""
