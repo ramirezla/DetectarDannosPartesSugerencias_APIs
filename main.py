@@ -1,33 +1,22 @@
-# api_dannos/main.py
+import os
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
-
-import os
-import numpy as np
-from typing import Dict, List, Union
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # 0: todos, 1: info, 2: warnings, 3: errors  Suprimir errores de tensorflow
 import tensorflow as tf
 from tensorflow.keras import applications
+import numpy as np
+from typing import Dict, List, Union
+from PIL import Image
+import base64
+from io import BytesIO
 
-# import base64
-# from io import BytesIO
-# from PIL import Image
+app = FastAPI(title="API de Detección de Daños", version="1.0")
 
-# Configuración
+# Configuración de rutas
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "modelos/final_model.keras")
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "predecir")
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-# Usar rutas absolutas o relativas al directorio actual
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# MODEL_PATH = os.path.join(current_dir, "../modelos/final_model.keras")
-# UPLOAD_FOLDER = os.path.join(current_dir, "../predecir")
 
-# app = FastAPI(
-#     title="API de Predicción de Daños",
-#     version="1.0.0"
-# )
-# port = int(os.environ.get("PORT", 10000))
+# Crear directorios si no existen
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 class DamagePredictor:
     def __init__(self, model_path: str):
@@ -151,7 +140,7 @@ class DamagePredictor:
         
         return results
 
-# Cargar modelo al iniciar # Cargar modelo
+# Cargar modelo al iniciar
 try:
     predictor = DamagePredictor(MODEL_PATH)
 except Exception as e:
@@ -161,31 +150,37 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.get("/predict")
+@app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    """Endpoint para predecir daños a partir de una imagen"""
-    if not allowed_file(file.filename):
-        raise HTTPException(400, detail="Tipo de archivo no permitido. Use .png, .jpg o .jpeg")
-    
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    
+    """Endpoint para predecir daños con imagen"""
     try:
-        # Guardar archivo temporal
+        # Guardar archivo temporalmente
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
         
         # Realizar predicción
         result = predictor.predict(file_path)
-        return JSONResponse(content=result)
-    
+        
+        # Opcional: devolver imagen en base64
+        with open(file_path, "rb") as image_file:
+            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        return {
+            "prediction": result,
+            "image_base64": encoded_image
+        }
+        
     except Exception as e:
-        raise HTTPException(500, detail=f"Error al procesar la imagen: {str(e)}")
-    
+        raise HTTPException(500, detail=str(e))
     finally:
         if os.path.exists(file_path):
             os.remove(file_path)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "model_loaded": True}
+    return {"status": "OK", "model_loaded": True}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
