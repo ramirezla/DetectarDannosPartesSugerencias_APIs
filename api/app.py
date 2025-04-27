@@ -120,28 +120,6 @@ class DamagePredictor:
         predictions = self.model.predict(img_array)
         
         return self._format_predictions(predictions)
-    
-    @app.post("/predict_with_image")
-    async def predict_with_image(file: UploadFile = File(...)):
-        """Devuelve la imagen redimensionada junto con la predicción"""
-        image_data = await file.read()
-        image = Image.open(BytesIO(image_data))
-        image.thumbnail((400, 400))  # Redimensionar
-        
-        # Convertir a bytes
-        buffered = BytesIO()
-        image.save(buffered, format="JPEG")
-        
-        # Realizar predicción
-        temp_path = "temp_img.jpg"
-        with open(temp_path, "wb") as f:
-            f.write(buffered.getvalue())
-        prediction = predictor.predict(temp_path)
-        
-        return {
-            "prediction": prediction,
-            "image": base64.b64encode(buffered.getvalue()).decode("utf-8")
-        }
 
     def _format_predictions(self, predictions: List[np.ndarray]) -> Dict[str, List[Dict[str, Union[str, float]]]]:
         """Formatea las predicciones para la API con nombres correctos"""
@@ -182,67 +160,30 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# @app.post("/predict")
-# async def predict(file: UploadFile = File(...)):
-#     """Endpoint para predecir daños a partir de una imagen"""
-#     if not allowed_file(file.filename):
-#         raise HTTPException(400, detail="Tipo de archivo no permitido. Use .png, .jpg o .jpeg")
-    
-#     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-#     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    
-#     try:
-#         # Guardar archivo temporal
-#         with open(file_path, "wb") as buffer:
-#             buffer.write(await file.read())
-        
-#         # Realizar predicción
-#         result = predictor.predict(file_path)
-#         return JSONResponse(content=result)
-    
-#     except Exception as e:
-#         raise HTTPException(500, detail=f"Error al procesar la imagen: {str(e)}")
-    
-#     finally:
-#         if os.path.exists(file_path):
-#             os.remove(file_path)
-
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    """Endpoint que devuelve predicción + imagen en base64"""
+    """Endpoint para predecir daños a partir de una imagen"""
+    if not allowed_file(file.filename):
+        raise HTTPException(400, detail="Tipo de archivo no permitido. Use .png, .jpg o .jpeg")
+    
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    
     try:
-        # Leer la imagen
-        image_data = await file.read()
-        image = Image.open(BytesIO(image_data))
-        
-        # Guardar temporalmente para procesamiento
-        temp_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        with open(temp_path, "wb") as buffer:
-            buffer.write(image_data)
+        # Guardar archivo temporal
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
         
         # Realizar predicción
-        prediction = predictor.predict(temp_path)
-        
-        # Convertir imagen a base64
-        buffered = BytesIO()
-        image.save(buffered, format="JPEG")
-        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        
-        # Eliminar archivo temporal
-        os.remove(temp_path)
-        
-        return {
-            "prediction": prediction,
-            "image_base64": img_str,
-            "image_format": "jpg",
-            "image_size": image.size
-        }
-        
+        result = predictor.predict(file_path)
+        return JSONResponse(content=result)
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(500, detail=f"Error al procesar la imagen: {str(e)}")
+    
     finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 @app.get("/health")
 async def health_check():
