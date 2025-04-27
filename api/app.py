@@ -13,10 +13,20 @@ import base64
 from io import BytesIO
 from PIL import Image
 
+# Configuración
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "../modelos/final_model.keras")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "../predecir")
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+# Usar rutas absolutas o relativas al directorio actual
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# MODEL_PATH = os.path.join(current_dir, "../modelos/final_model.keras")
+# UPLOAD_FOLDER = os.path.join(current_dir, "../predecir")
+
 app = FastAPI(
     title="API de Predicción de Daños",
     version="1.0.0"
 )
+port = int(os.environ.get("PORT", 10000))
 
 class DamagePredictor:
     def __init__(self, model_path: str):
@@ -161,16 +171,6 @@ class DamagePredictor:
             results[category] = category_predictions
         
         return results
-
-# Configuración
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "../modelos/final_model.keras")
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "../predecir")
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-
-# Usar rutas absolutas o relativas al directorio actual
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# MODEL_PATH = os.path.join(current_dir, "../modelos/final_model.keras")
-# UPLOAD_FOLDER = os.path.join(current_dir, "../predecir")
 
 # Cargar modelo al iniciar # Cargar modelo
 try:
