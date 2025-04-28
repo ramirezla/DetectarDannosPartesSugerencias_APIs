@@ -1,3 +1,21 @@
+"""
+API de Detección de Daños usando FastAPI y un modelo TensorFlow Keras.
+
+Este módulo define una API REST para predecir daños en imágenes de vehículos.
+Incluye la clase DamagePredictor para cargar el modelo, preprocesar imágenes,
+realizar predicciones y formatear resultados.
+
+Endpoints disponibles:
+- GET /: Mensaje de bienvenida y descripción de endpoints.
+- POST /predict: Recibe una imagen y devuelve predicciones de daños.
+- GET /health: Verifica el estado de la API y carga del modelo.
+
+Configuración:
+- MODEL_PATH: Ruta al modelo entrenado.
+- UPLOAD_FOLDER: Carpeta para almacenar imágenes subidas temporalmente.
+
+"""
+
 import os
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
@@ -19,8 +37,17 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "predecir")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 class DamagePredictor:
+    """
+    Clase para cargar el modelo de detección de daños, preprocesar imágenes,
+    realizar predicciones y formatear los resultados para la API.
+    """
     def __init__(self, model_path: str):
-        """Inicializa el predictor con el modelo cargado"""
+        """
+        Inicializa el predictor cargando el modelo desde la ruta especificada.
+
+        Args:
+            model_path (str): Ruta al archivo del modelo Keras.
+        """
         self.model = tf.keras.models.load_model(model_path)
         self.img_size = (224, 224)
         
@@ -95,14 +122,35 @@ class DamagePredictor:
         }
 
     def preprocess_image(self, image_path: str) -> np.ndarray:
-        """Preprocesamiento para EfficientNet"""
+        """
+        Preprocesa la imagen para el modelo EfficientNet.
+
+        Args:
+            image_path (str): Ruta a la imagen a procesar.
+
+        Returns:
+            np.ndarray: Imagen preprocesada lista para la predicción.
+        """
         img = tf.keras.preprocessing.image.load_img(image_path, target_size=self.img_size)
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = applications.efficientnet.preprocess_input(img_array)
         return np.expand_dims(img_array, axis=0)
 
     def predict(self, image_path: str) -> Dict[str, List[Dict[str, Union[str, float]]]]:
-        """Predicción principal"""
+        """
+        Realiza la predicción principal de daños en la imagen.
+
+        Args:
+            image_path (str): Ruta a la imagen para predecir.
+
+        Raises:
+            FileNotFoundError: Si la imagen no existe en la ruta dada.
+
+        Returns:
+            Dict[str, List[Dict[str, Union[str, float]]]]: Diccionario con las predicciones
+            para cada categoría ('partes', 'dannos', 'sugerencias'), cada una con las
+            top 3 etiquetas y sus probabilidades.
+        """
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Archivo no encontrado: {image_path}")
         
@@ -112,7 +160,15 @@ class DamagePredictor:
         return self._format_predictions(predictions)
 
     def _format_predictions(self, predictions: List[np.ndarray]) -> Dict[str, List[Dict[str, Union[str, float]]]]:
-        """Formatea las predicciones para la API con nombres correctos"""
+        """
+        Formatea las predicciones para la API con nombres legibles.
+
+        Args:
+            predictions (List[np.ndarray]): Lista de arrays con probabilidades para cada categoría.
+
+        Returns:
+            Dict[str, List[Dict[str, Union[str, float]]]]: Diccionario con las predicciones formateadas.
+        """
         results = {}
         
         # Mapeo de categorías a sus respectivos diccionarios
@@ -147,11 +203,26 @@ except Exception as e:
     raise RuntimeError(f"Error cargando modelo: {str(e)}")
 
 def allowed_file(filename: str) -> bool:
+    """
+    Verifica si el archivo tiene una extensión permitida.
+
+    Args:
+        filename (str): Nombre del archivo.
+
+    Returns:
+        bool: True si la extensión es permitida, False en caso contrario.
+    """
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.get("/")
 async def root():
+    """
+    Endpoint raíz que devuelve un mensaje de bienvenida y los endpoints disponibles.
+
+    Returns:
+        dict: Mensaje de bienvenida y descripción de endpoints.
+    """
     return {
         "message": "Bienvenido a la API de Detección de Daños",
         "endpoints": {
@@ -162,7 +233,18 @@ async def root():
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    """Endpoint para predecir daños con imagen"""
+    """
+    Endpoint para predecir daños en una imagen subida.
+
+    Args:
+        file (UploadFile): Archivo de imagen subido.
+
+    Returns:
+        dict: Diccionario con la predicción y la imagen codificada en base64.
+
+    Raises:
+        HTTPException: Si ocurre un error durante la predicción.
+    """
     try:
         # Guardar archivo temporalmente
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -189,8 +271,14 @@ async def predict(file: UploadFile = File(...)):
 
 @app.get("/health")
 async def health_check():
+    """
+    Endpoint para verificar el estado de la API y la carga del modelo.
+
+    Returns:
+        dict: Estado de la API y confirmación de carga del modelo.
+    """
     return {"status": "OK", "model_loaded": True}
 
 # if __name__ == "__main__":
 #     import uvicorn
-#     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+#     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 10000))) 
