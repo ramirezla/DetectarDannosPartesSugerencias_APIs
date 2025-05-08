@@ -26,6 +26,7 @@ from typing import Dict, List, Union
 from PIL import Image
 import base64
 from io import BytesIO
+import pickle
 
 app = FastAPI(title="API de Detección de Daños", version="1.0")
 
@@ -121,6 +122,16 @@ class DamagePredictor:
             }
         }
 
+    def load_model(model_path):
+    """
+        Carga un modelo guardado en formato .keras o .h5 sin necesidad de reentrenar.
+        """
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"El archivo del modelo no existe: {model_path}")
+        model = tf.keras.models.load_model(model_path)
+        print(f"Modelo cargado desde {model_path}")
+        return model
+
     def preprocess_image(self, image_path: str) -> np.ndarray:
         """
         Preprocesa la imagen para el modelo EfficientNet.
@@ -134,7 +145,7 @@ class DamagePredictor:
         img_array = applications.efficientnet.preprocess_input(img_array)
         return np.expand_dims(img_array, axis=0)
 
-    def predict(self, image_path: str) -> Dict[str, List[Dict[str, Union[str, float]]]]:
+    # def predict(self, image_path: str) -> Dict[str, List[Dict[str, Union[str, float]]]]:
         """
         Realiza la predicción principal de daños en la imagen.
         Args:
@@ -146,13 +157,38 @@ class DamagePredictor:
             para cada categoría ('partes', 'dannos', 'sugerencias'), cada una con las
             top 3 etiquetas y sus probabilidades.
         """
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Archivo no encontrado: {image_path}")
+        # if not os.path.exists(image_path):
+            # raise FileNotFoundError(f"Archivo no encontrado: {image_path}")
         
-        img_array = self.preprocess_image(image_path)
-        predictions = self.model.predict(img_array)
+        # img_array = self.preprocess_image(image_path)
+        # predictions = self.model.predict(img_array)
         
-        return self._format_predictions(predictions)
+        # return self._format_predictions(predictions)
+
+    def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
+        """
+        Realiza predicción usando el modelo cargado para una imagen dada.
+        """
+        img_array = preprocess_image(image_path)
+        predictions = model.predict(img_array)
+
+        partes_probs = predictions[0][0]
+        dannos_probs = predictions[1][0]
+        sugerencias_probs = predictions[2][0]
+
+        def get_top_predictions(classes, probs, label_dict, top_n=3):
+            top_items = sorted(zip(classes, probs), key=lambda x: x[1], reverse=True)[:top_n]
+            return [(label_dict.get(int(cls), f"Clase_{int(cls)}"), float(prob)) for cls, prob in top_items]
+
+        partes_pred = get_top_predictions(mlb_partes.classes_, partes_probs, label_to_cls_piezas)
+        dannos_pred = get_top_predictions(mlb_danos.classes_, dannos_probs, label_to_cls_danos)
+        sugerencias_pred = get_top_predictions(mlb_sugerencias.classes_, sugerencias_probs, label_to_cls_sugerencias)
+
+        return {
+            'partes': partes_pred,
+            'dannos': dannos_pred,
+            'sugerencias': sugerencias_pred
+        }
 
     def _format_predictions(self, predictions: List[np.ndarray]) -> Dict[str, List[Dict[str, Union[str, float]]]]:
         """
@@ -190,10 +226,22 @@ class DamagePredictor:
         return results
 
 # Cargar modelo al iniciar
-try:
-    predictor = DamagePredictor(MODEL_PATH)
-except Exception as e:
-    raise RuntimeError(f"Error cargando modelo: {str(e)}")
+# try:
+    # predictor = DamagePredictor(MODEL_PATH)
+# except Exception as e:
+    # raise RuntimeError(f"Error cargando modelo: {str(e)}")
+
+ # Cargar modelo
+model_path = "final_model_fine_tuned_v2.keras"  # Cambiar si se usa otro archivo
+model = load_model(model_path)
+
+# Cargar MultiLabelBinarizer guardados (adaptar rutas)
+with open("mlb_partes.pkl", "rb") as f:
+    mlb_partes = pickle.load(f)
+with open("mlb_dannos.pkl", "rb") as f:
+    mlb_dannos = pickle.load(f)
+with open("mlb_sugerencias.pkl", "rb") as f:
+    mlb_sugerencias = pickle.load(f)
 
 def allowed_file(filename: str) -> bool:
     """
