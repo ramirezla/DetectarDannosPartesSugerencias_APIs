@@ -30,7 +30,8 @@ from io import BytesIO
 app = FastAPI(title="API de Detección de Daños", version="1.0")
 
 # Configuración de rutas
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "modelos/final_model.keras")
+## MODEL_PATH = os.path.join(os.path.dirname(__file__), "modelos/final_model.keras")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "modelos/final_model_fine_tuned_v2.keras")
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "predecir")
 
 # Crear directorios si no existen
@@ -44,7 +45,6 @@ class DamagePredictor:
     def __init__(self, model_path: str):
         """
         Inicializa el predictor cargando el modelo desde la ruta especificada.
-
         Args:
             model_path (str): Ruta al archivo del modelo Keras.
         """
@@ -124,10 +124,8 @@ class DamagePredictor:
     def preprocess_image(self, image_path: str) -> np.ndarray:
         """
         Preprocesa la imagen para el modelo EfficientNet.
-
         Args:
             image_path (str): Ruta a la imagen a procesar.
-
         Returns:
             np.ndarray: Imagen preprocesada lista para la predicción.
         """
@@ -139,13 +137,10 @@ class DamagePredictor:
     def predict(self, image_path: str) -> Dict[str, List[Dict[str, Union[str, float]]]]:
         """
         Realiza la predicción principal de daños en la imagen.
-
         Args:
             image_path (str): Ruta a la imagen para predecir.
-
         Raises:
             FileNotFoundError: Si la imagen no existe en la ruta dada.
-
         Returns:
             Dict[str, List[Dict[str, Union[str, float]]]]: Diccionario con las predicciones
             para cada categoría ('partes', 'dannos', 'sugerencias'), cada una con las
@@ -162,10 +157,8 @@ class DamagePredictor:
     def _format_predictions(self, predictions: List[np.ndarray]) -> Dict[str, List[Dict[str, Union[str, float]]]]:
         """
         Formatea las predicciones para la API con nombres legibles.
-
         Args:
             predictions (List[np.ndarray]): Lista de arrays con probabilidades para cada categoría.
-
         Returns:
             Dict[str, List[Dict[str, Union[str, float]]]]: Diccionario con las predicciones formateadas.
         """
@@ -205,10 +198,8 @@ except Exception as e:
 def allowed_file(filename: str) -> bool:
     """
     Verifica si el archivo tiene una extensión permitida.
-
     Args:
         filename (str): Nombre del archivo.
-
     Returns:
         bool: True si la extensión es permitida, False en caso contrario.
     """
@@ -219,7 +210,6 @@ def allowed_file(filename: str) -> bool:
 async def root():
     """
     Endpoint raíz que devuelve un mensaje de bienvenida y los endpoints disponibles.
-
     Returns:
         dict: Mensaje de bienvenida y descripción de endpoints.
     """
@@ -235,13 +225,10 @@ async def root():
 async def predict(file: UploadFile = File(...)):
     """
     Endpoint para predecir daños en una imagen subida.
-
     Args:
         file (UploadFile): Archivo de imagen subido.
-
     Returns:
         dict: Diccionario con la predicción y la imagen codificada en base64.
-
     Raises:
         HTTPException: Si ocurre un error durante la predicción.
     """
@@ -273,7 +260,6 @@ async def predict(file: UploadFile = File(...)):
 async def health_check():
     """
     Endpoint para verificar el estado de la API y la carga del modelo.
-
     Returns:
         dict: Estado de la API y confirmación de carga del modelo.
     """
