@@ -140,11 +140,18 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
     dannos_pred = get_top_predictions(mlb_danos.classes_, dannos_probs, label_to_cls_danos)
     sugerencias_pred = get_top_predictions(mlb_sugerencias.classes_, sugerencias_probs, label_to_cls_sugerencias)
 
+    # Opcional: devolver imagen en base64
+    with open(file_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+
     return {
         'partes': partes_pred,
         'dannos': dannos_pred,
-        'sugerencias': sugerencias_pred
+        'sugerencias': sugerencias_pred,
+        "image_base64": encoded_image
     }
+
+
 
 @app.get("/")
 async def root():
