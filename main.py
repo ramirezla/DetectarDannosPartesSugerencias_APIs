@@ -23,7 +23,7 @@ import tensorflow as tf
 from tensorflow.keras import applications
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
-import scikit-learn
+import sklearn
 
 app = FastAPI(title="API de Detección de Daños", version="2.0")
 
