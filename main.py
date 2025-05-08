@@ -23,6 +23,7 @@ import tensorflow as tf
 from tensorflow.keras import applications
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
+import base64
 
 app = FastAPI(title="API de Detección de Daños", version="2.0")
 
@@ -141,7 +142,7 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
     sugerencias_pred = get_top_predictions(mlb_sugerencias.classes_, sugerencias_probs, label_to_cls_sugerencias)
 
     # Opcional: devolver imagen en base64
-    with open(file_path, "rb") as image_file:
+    with open(image_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
 
     return {
