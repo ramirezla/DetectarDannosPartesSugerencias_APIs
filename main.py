@@ -25,7 +25,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import base64
 
-app = FastAPI(title="API de Detección de Daños", version="2.0")
+app = FastAPI(title="API de Detección de Daños", version="3.0")
 
 # Diccionarios de mapeo (debe adaptarse si se usan otros)
 label_to_cls_piezas = {
@@ -97,7 +97,8 @@ label_to_cls_sugerencias = {
     2: "Reemplazar"
 }
 
-MODEL_PATH = "modelos/final_model_fine_tuned_v2.keras"
+##MODEL_PATH = "modelos/final_model_fine_tuned_v2.keras"
+MODEL_PATH = "modelos/modelo_final_v3.keras"
 MLB_PARTES_PATH = "mlb_partes.pkl"
 MLB_DANNOS_PATH = "mlb_dannos.pkl"
 MLB_SUGERENCIAS_PATH = "mlb_sugerencias.pkl"
