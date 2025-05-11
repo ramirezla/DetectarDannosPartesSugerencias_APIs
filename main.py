@@ -133,7 +133,7 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
     dannos_probs = predictions[1][0]
     sugerencias_probs = predictions[2][0]
 
-    def get_top_predictions(classes, probs, label_dict, top_n=1):    # top-n=3
+    def get_top_predictions(classes, probs, label_dict, top_n=2):    # top-n=3
         top_items = sorted(zip(classes, probs), key=lambda x: x[1], reverse=True)[:top_n]
         return [(label_dict.get(int(cls), f"Clase_{int(cls)}"), float(prob)) for cls, prob in top_items]
 
