@@ -97,8 +97,8 @@ label_to_cls_sugerencias = {
     2: "Reemplazar"
 }
 
-##MODEL_PATH = "modelos/final_model_fine_tuned_v2.keras"
-MODEL_PATH = "modelos/modelo_final_v3.keras"
+MODEL_PATH = "modelos/final_model_fine_tuned_v2.keras"
+###MODEL_PATH = "modelos/modelo_final_v3.keras"
 MLB_PARTES_PATH = "mlb_partes.pkl"
 MLB_DANNOS_PATH = "mlb_dannos.pkl"
 MLB_SUGERENCIAS_PATH = "mlb_sugerencias.pkl"
