@@ -173,11 +173,24 @@ def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias
         cls_name = str(cls)
         threshold = thresholds_partes.get(cls_name, 0.5)  # usar 0.5 si no está definido
         prob = float(partes_probs[i])
-        partes_pred.append((cls_name, prob, prob >= threshold))
+        partes_pred.append({
+            "class": cls_name,
+            "probability": prob,
+            "above_threshold": prob >= threshold
+        })
 
     # Para daños y sugerencias se usa umbral fijo 0.5 (puede extenderse si se desea)
-    dannos_pred = [(str(cls), float(dannos_probs[i]), dannos_probs[i] >= 0.5) for i, cls in enumerate(mlb_danos.classes_)]
-    sugerencias_pred = [(str(cls), float(sugerencias_probs[i]), sugerencias_probs[i] >= 0.5) for i, cls in enumerate(mlb_sugerencias.classes_)]
+    dannos_pred = [{
+        "class": str(cls),
+        "probability": float(dannos_probs[i]),
+        "above_threshold": dannos_probs[i] >= 0.5
+    } for i, cls in enumerate(mlb_danos.classes_)]
+
+    sugerencias_pred = [{
+        "class": str(cls),
+        "probability": float(sugerencias_probs[i]),
+        "above_threshold": sugerencias_probs[i] >= 0.5
+    } for i, cls in enumerate(mlb_sugerencias.classes_)]
 
     return {
         'partes': partes_pred,
