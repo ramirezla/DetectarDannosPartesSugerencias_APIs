@@ -160,7 +160,7 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
         "image_base64": encoded_image
     }
 
-def predict_with_thresholds(image_path, model, mlb_partes, mlb_dannos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
+def predict_thresholds(image_path, model, mlb_partes, mlb_dannos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
     img_array = preprocess_image(image_path, img_size)
     predictions = model.predict(img_array)
 
