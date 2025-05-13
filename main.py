@@ -173,24 +173,38 @@ def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias
         cls_name = str(cls)
         threshold = thresholds_partes.get(cls_name, 0.5)  # usar 0.5 si no está definido
         prob = float(partes_probs[i])
+        above_thresh = bool(prob >= threshold)
         partes_pred.append({
             "class": cls_name,
             "probability": prob,
-            "above_threshold": prob >= threshold
+            "above_threshold": above_thresh
         })
 
     # Para daños y sugerencias se usa umbral fijo 0.5 (puede extenderse si se desea)
-    dannos_pred = [{
-        "class": str(cls),
-        "probability": float(dannos_probs[i]),
-        "above_threshold": dannos_probs[i] >= 0.5
-    } for i, cls in enumerate(mlb_danos.classes_)]
+    dannos_pred = []
+    for i, cls in enumerate(mlb_danos.classes_):
+        prob = float(dannos_probs[i])
+        above_thresh = bool(dannos_probs[i] >= 0.5)
+        dannos_pred.append({
+            "class": str(cls),
+            "probability": prob,
+            "above_threshold": above_thresh
+        })
 
-    sugerencias_pred = [{
-        "class": str(cls),
-        "probability": float(sugerencias_probs[i]),
-        "above_threshold": sugerencias_probs[i] >= 0.5
-    } for i, cls in enumerate(mlb_sugerencias.classes_)]
+    sugerencias_pred = []
+    for i, cls in enumerate(mlb_sugerencias.classes_):
+        prob = float(sugerencias_probs[i])
+        above_thresh = bool(sugerencias_probs[i] >= 0.5)
+        sugerencias_pred.append({
+            "class": str(cls),
+            "probability": prob,
+            "above_threshold": above_thresh
+        })
+
+    # Logging types for debugging serialization issues
+    logging.debug("partes_pred types: %s", [(type(item["above_threshold"]), type(item["probability"])) for item in partes_pred])
+    logging.debug("dannos_pred types: %s", [(type(item["above_threshold"]), type(item["probability"])) for item in dannos_pred])
+    logging.debug("sugerencias_pred types: %s", [(type(item["above_threshold"]), type(item["probability"])) for item in sugerencias_pred])
 
     return {
         'partes': partes_pred,
@@ -251,9 +265,7 @@ async def predict_thresholds_endpoint(file: UploadFile = File(...)):
             contents = await file.read()
             tmp.write(contents)
             tmp.flush()
-            results = predict_thresholds(
-                tmp.name, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes
-            )
-        return JSONResponse(content=results)
+            results = predict_thresholds(tmp.name, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes)
+        return ORJSONResponse(content=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
