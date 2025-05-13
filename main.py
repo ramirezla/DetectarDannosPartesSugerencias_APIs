@@ -162,7 +162,7 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
     }
 
 
-def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
+def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes, img_size=(224, 224), top_n=2):
     img_array = preprocess_image(image_path, img_size)
     predictions = model.predict(img_array)
 
@@ -170,7 +170,7 @@ def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias
     dannos_probs = predictions[1][0]
     sugerencias_probs = predictions[2][0]
 
-    def get_top_predictions(classes, probs, label_dict, thresholds=None, top_n=2):
+    def get_top_predictions(classes, probs, label_dict, thresholds=None, top_n):
         items = []
         for i, cls in enumerate(classes):
             cls_name = label_dict.get(int(cls), f"Clase_{int(cls)}")
