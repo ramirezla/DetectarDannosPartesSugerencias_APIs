@@ -161,7 +161,8 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
         "image_base64": encoded_image
     }
 
-def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
+
+def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes, img_size=(224, 224), top_n=3):
     img_array = preprocess_image(image_path, img_size)
     predictions = model.predict(img_array)
 
@@ -169,50 +170,36 @@ def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias
     dannos_probs = predictions[1][0]
     sugerencias_probs = predictions[2][0]
 
-    # Aplicar umbrales personalizados para partes
-    partes_pred = []
-    for i, cls in enumerate(mlb_partes.classes_):
-        cls_name = str(cls)
-        threshold = thresholds_partes.get(cls_name, 0.5)  # usar 0.5 si no está definido
-        prob = float(partes_probs[i])
-        above_thresh = bool(prob >= threshold)
-        partes_pred.append({
-            "class": cls_name,
-            "probability": prob,
-            "above_threshold": above_thresh
-        })
+    def get_top_predictions(classes, probs, label_dict, thresholds=None, top_n=3):
+        items = []
+        for i, cls in enumerate(classes):
+            cls_name = label_dict.get(int(cls), f"Clase_{int(cls)}")
+            prob = float(probs[i])
+            above_thresh = False
+            if thresholds:
+                threshold = thresholds.get(str(cls), 0.5)
+                above_thresh = prob >= threshold
+            else:
+                above_thresh = prob >= 0.5
+            items.append({
+                "class": cls_name,
+                "probability": prob,
+                "above_threshold": bool(above_thresh)
+            })
+        # Sort by probability descending and take top_n
+        items_sorted = sorted(items, key=lambda x: x["probability"], reverse=True)[:top_n]
+        return items_sorted
 
-    # Para daños y sugerencias se usa umbral fijo 0.5 (puede extenderse si se desea)
-    dannos_pred = []
-    for i, cls in enumerate(mlb_danos.classes_):
-        prob = float(dannos_probs[i])
-        above_thresh = bool(dannos_probs[i] >= 0.5)
-        dannos_pred.append({
-            "class": str(cls),
-            "probability": prob,
-            "above_threshold": above_thresh
-        })
-
-    sugerencias_pred = []
-    for i, cls in enumerate(mlb_sugerencias.classes_):
-        prob = float(sugerencias_probs[i])
-        above_thresh = bool(sugerencias_probs[i] >= 0.5)
-        sugerencias_pred.append({
-            "class": str(cls),
-            "probability": prob,
-            "above_threshold": above_thresh
-        })
-
-    # Logging types for debugging serialization issues
-    logging.debug("partes_pred types: %s", [(type(item["above_threshold"]), type(item["probability"])) for item in partes_pred])
-    logging.debug("dannos_pred types: %s", [(type(item["above_threshold"]), type(item["probability"])) for item in dannos_pred])
-    logging.debug("sugerencias_pred types: %s", [(type(item["above_threshold"]), type(item["probability"])) for item in sugerencias_pred])
+    partes_pred = get_top_predictions(mlb_partes.classes_, partes_probs, label_to_cls_piezas, thresholds_partes, top_n)
+    dannos_pred = get_top_predictions(mlb_danos.classes_, dannos_probs, label_to_cls_danos, None, top_n)
+    sugerencias_pred = get_top_predictions(mlb_sugerencias.classes_, sugerencias_probs, label_to_cls_sugerencias, None, top_n)
 
     return {
         'partes': partes_pred,
         'dannos': dannos_pred,
         'sugerencias': sugerencias_pred
     }
+
 
 @app.get("/")
 async def root():
