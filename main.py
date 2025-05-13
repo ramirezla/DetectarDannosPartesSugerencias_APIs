@@ -243,7 +243,7 @@ async def predict_thresholds_endpoint(file: UploadFile = File(...)):
             tmp.write(contents)
             tmp.flush()
             # Usar función del script predict_with_custom_thresholds.py
-            results = predict_with_custom_thresholds.predict_with_thresholds(
+            results = predict_thresholds(
                 tmp.name, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes
             )
         return JSONResponse(content=results)
