@@ -179,6 +179,9 @@ def predict_with_thresholds(image_path, model, mlb_partes, mlb_dannos, mlb_suger
     dannos_pred = [(str(cls), dannos_probs[i], dannos_probs[i] >= 0.5) for i, cls in enumerate(mlb_dannos.classes_)]
     sugerencias_pred = [(str(cls), sugerencias_probs[i], sugerencias_probs[i] >= 0.5) for i, cls in enumerate(mlb_sugerencias.classes_)]
 
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+
     return {
         'partes': partes_pred,
         'dannos': dannos_pred,
