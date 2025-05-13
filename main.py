@@ -99,7 +99,6 @@ label_to_cls_sugerencias = {
 }
 
 MODEL_PATH = "modelos/final_model_fine_tuned_v2.keras"
-###MODEL_PATH = "modelos/modelo_final_v3.keras"
 MLB_PARTES_PATH = "mlb_partes.pkl"
 MLB_DANNOS_PATH = "mlb_dannos.pkl"
 MLB_SUGERENCIAS_PATH = "mlb_sugerencias.pkl"
@@ -160,7 +159,7 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
         "image_base64": encoded_image
     }
 
-def predict_thresholds(image_path, model, mlb_partes, mlb_dannos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
+def predict_thresholds(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
     img_array = preprocess_image(image_path, img_size)
     predictions = model.predict(img_array)
 
@@ -173,20 +172,17 @@ def predict_thresholds(image_path, model, mlb_partes, mlb_dannos, mlb_sugerencia
     for i, cls in enumerate(mlb_partes.classes_):
         cls_name = str(cls)
         threshold = thresholds_partes.get(cls_name, 0.5)  # usar 0.5 si no está definido
-        partes_pred.append((cls_name, partes_probs[i], partes_probs[i] >= threshold))
+        prob = float(partes_probs[i])
+        partes_pred.append((cls_name, prob, prob >= threshold))
 
     # Para daños y sugerencias se usa umbral fijo 0.5 (puede extenderse si se desea)
-    dannos_pred = [(str(cls), dannos_probs[i], dannos_probs[i] >= 0.5) for i, cls in enumerate(mlb_dannos.classes_)]
-    sugerencias_pred = [(str(cls), sugerencias_probs[i], sugerencias_probs[i] >= 0.5) for i, cls in enumerate(mlb_sugerencias.classes_)]
-
-    with open(image_path, "rb") as image_file:
-        encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+    dannos_pred = [(str(cls), float(dannos_probs[i]), dannos_probs[i] >= 0.5) for i, cls in enumerate(mlb_danos.classes_)]
+    sugerencias_pred = [(str(cls), float(sugerencias_probs[i]), sugerencias_probs[i] >= 0.5) for i, cls in enumerate(mlb_sugerencias.classes_)]
 
     return {
         'partes': partes_pred,
         'dannos': dannos_pred,
-        'sugerencias': sugerencias_pred,
-        "image_base64": encoded_image
+        'sugerencias': sugerencias_pred
     }
 
 @app.get("/")
@@ -242,7 +238,6 @@ async def predict_thresholds_endpoint(file: UploadFile = File(...)):
             contents = await file.read()
             tmp.write(contents)
             tmp.flush()
-            # Usar función del script predict_with_custom_thresholds.py
             results = predict_thresholds(
                 tmp.name, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes
             )
