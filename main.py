@@ -24,6 +24,7 @@ from tensorflow.keras import applications
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import base64
+import json
 
 app = FastAPI(title="API de Detección de Daños", version="3.2")
 
