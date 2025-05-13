@@ -25,7 +25,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import base64
 
-app = FastAPI(title="API de Detección de Daños", version="3.0")
+app = FastAPI(title="API de Detección de Daños", version="3.2")
 
 # Diccionarios de mapeo (debe adaptarse si se usan otros)
 label_to_cls_piezas = {
@@ -103,6 +103,12 @@ MLB_PARTES_PATH = "mlb_partes.pkl"
 MLB_DANNOS_PATH = "mlb_dannos.pkl"
 MLB_SUGERENCIAS_PATH = "mlb_sugerencias.pkl"
 
+# Variables globales para modelo y binarizadores
+model = None
+mlb_partes = None
+mlb_danos = None
+mlb_sugerencias = None
+
 # Load model and MultiLabelBinarizers on startup
 @app.on_event("startup")
 def load_resources():
@@ -166,6 +172,7 @@ async def root():
         "message": "Bienvenido a la API de Detección de Daños",
         "endpoints": {
             "predict": "/predict (POST - Sube una imagen para predecir daños)",
+            "predict_thresholds": "/predict_thresholds (POST - Sube una imagen para predecir con umbrales personalizados)",
             "health": "/health (GET - Verifica el estado de la API)"
         }
     }
@@ -190,6 +197,27 @@ async def predict_endpoint(file: UploadFile = File(...)):
             tmp.write(contents)
             tmp.flush()
             results = predict(tmp.name, model, mlb_partes, mlb_danos, mlb_sugerencias)
+        return JSONResponse(content=results)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/predict_thresholds")
+async def predict_thresholds_endpoint(file: UploadFile = File(...)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+    try:
+        # Cargar umbrales personalizados (puedes ajustar la ruta o cargar desde otro lugar)
+        thresholds_path = "optimal_thresholds_partes.json"
+        with open(thresholds_path, "r") as f:
+            thresholds_partes = json.load(f)
+        with tempfile.NamedTemporaryFile(delete=True, suffix=".jpg") as tmp:
+            contents = await file.read()
+            tmp.write(contents)
+            tmp.flush()
+            # Usar función del script predict_with_custom_thresholds.py
+            results = predict_with_custom_thresholds.predict_with_thresholds(
+                tmp.name, model, mlb_partes, mlb_danos, mlb_sugerencias, thresholds_partes
+            )
         return JSONResponse(content=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
