@@ -25,6 +25,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 import base64
 import json
+import logging
+from fastapi.responses import JSONResponse, ORJSONResponse
 
 app = FastAPI(title="API de Detección de Daños", version="3.2")
 
