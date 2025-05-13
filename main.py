@@ -160,7 +160,31 @@ def predict(image_path, model, mlb_partes, mlb_danos, mlb_sugerencias):
         "image_base64": encoded_image
     }
 
+def predict_with_thresholds(image_path, model, mlb_partes, mlb_dannos, mlb_sugerencias, thresholds_partes, img_size=(224, 224)):
+    img_array = preprocess_image(image_path, img_size)
+    predictions = model.predict(img_array)
 
+    partes_probs = predictions[0][0]
+    dannos_probs = predictions[1][0]
+    sugerencias_probs = predictions[2][0]
+
+    # Aplicar umbrales personalizados para partes
+    partes_pred = []
+    for i, cls in enumerate(mlb_partes.classes_):
+        cls_name = str(cls)
+        threshold = thresholds_partes.get(cls_name, 0.5)  # usar 0.5 si no está definido
+        partes_pred.append((cls_name, partes_probs[i], partes_probs[i] >= threshold))
+
+    # Para daños y sugerencias se usa umbral fijo 0.5 (puede extenderse si se desea)
+    dannos_pred = [(str(cls), dannos_probs[i], dannos_probs[i] >= 0.5) for i, cls in enumerate(mlb_dannos.classes_)]
+    sugerencias_pred = [(str(cls), sugerencias_probs[i], sugerencias_probs[i] >= 0.5) for i, cls in enumerate(mlb_sugerencias.classes_)]
+
+    return {
+        'partes': partes_pred,
+        'dannos': dannos_pred,
+        'sugerencias': sugerencias_pred,
+        "image_base64": encoded_image
+    }
 
 @app.get("/")
 async def root():
